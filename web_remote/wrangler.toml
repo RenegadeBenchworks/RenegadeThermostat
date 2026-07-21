@@ -1,0 +1,17 @@
+name = "thermostat"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+# Non-sensitive config — safe to commit.
+# FIREBASE_URL uses https:// prefix (used as a base URL in the worker).
+FIREBASE_URL = "https://your-project-default-rtdb.firebaseio.com"
+
+# Secrets (FIREBASE_SECRET, SITE_TOKEN) must be set via Cloudflare dashboard
+# → Workers → thermostat → Settings → Variables and Secrets → add as Secret type.
+# Secrets survive deployments automatically.
+
+[assets]
+directory = "."
+binding = "ASSETS"
+not_found_handling = "single-page-application"

@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Renegade Thermostat Control</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Arial,sans-serif;background:#000;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .card{background:#fff;color:#111;border-radius:20px;padding:28px 24px 24px;width:100%;max-width:420px}
+    .hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .hdr .ref{color:#2563eb;font-size:22px;cursor:pointer;line-height:1;flex-shrink:0;background:none;border:none;padding:0}
+    .hdr svg{flex-shrink:0}
+    .hdr h1{font-size:26px;font-weight:700;color:#111}
+    .authbadge{margin-left:auto;flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;cursor:default}
+    .authbadge.auth-on{background:#dcfce7;color:#166534}
+    .authbadge.auth-off{background:#fef9c3;color:#854d0e}
+    /* tabs */
+    .tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #e5e7eb}
+    .tab{flex:1;padding:10px 0;font-size:14px;font-weight:700;letter-spacing:.04em;background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;color:#6b7280;transition:color .15s,border-color .15s;margin-bottom:-2px}
+    .tab.active{color:#2563eb;border-bottom-color:#2563eb}
+    /* control tab */
+    .row{text-align:center;font-size:17px;color:#555;margin-bottom:8px}
+    .row b{color:#111;font-weight:600}
+    .sldwrap{margin:18px 0 22px}
+    input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;cursor:pointer}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#2563eb;cursor:pointer;box-shadow:0 0 0 2px #fff,0 0 0 4px #2563eb}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#2563eb;border:none;cursor:pointer}
+    .mgrp{display:flex;border-radius:10px;overflow:hidden;border:2px solid #2563eb;margin-bottom:16px}
+    .mbtn{flex:1;padding:12px 0;font-size:15px;font-weight:700;letter-spacing:.04em;border:none;cursor:pointer;background:#fff;color:#2563eb;transition:background .15s,color .15s}
+    .mbtn+.mbtn{border-left:1px solid #2563eb}
+    .mbtn.active{background:#2563eb;color:#fff}
+    .mstat{text-align:center;font-size:17px;color:#555;margin-bottom:20px}
+    .mstat b{color:#111;font-weight:600}
+    .sbtn{width:100%;padding:16px;font-size:15px;font-weight:700;letter-spacing:.06em;border:none;border-radius:10px;background:#d1d5db;color:#9ca3af;cursor:not-allowed;transition:background .2s,color .2s}
+    .sbtn.ready{background:#2563eb;color:#fff;cursor:pointer}
+    .banner{display:none;margin-top:12px;padding:10px 14px;background:#fee2e2;color:#b91c1c;border-radius:8px;font-size:14px}
+    .banner.show{display:block}
+    /* schedule tab  */
+    .srow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;margin-bottom:14px}
+    .slbl{font-size:16px;font-weight:600;color:#111}
+    .sw{position:relative;display:inline-block;width:48px;height:26px}
+    .sw input{opacity:0;width:0;height:0}
+    .sl{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#d1d5db;border-radius:26px;transition:.25s}
+    .sl::before{position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s}
+    input:checked+.sl{background:#2563eb}
+    input:checked+.sl::before{transform:translateX(22px)}
+    .sday{margin-bottom:10px;background:#f9fafb;border-radius:10px;padding:10px 12px}
+    .sdayname{font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+    .speriod{display:flex;align-items:center;gap:8px;padding:3px 0}
+    .splbl{font-size:12px;color:#6b7280;width:58px;flex-shrink:0}
+    .stinp{border:1px solid #e5e7eb;border-radius:6px;padding:5px 6px;font-size:13px;width:96px;color:#111}
+    .sspinp{border:1px solid #e5e7eb;border-radius:6px;padding:5px 6px;font-size:13px;width:52px;text-align:center;color:#111}
+    .spunit{font-size:12px;color:#6b7280}
+    .smsg{text-align:center;font-size:13px;color:#16a34a;min-height:20px;margin-top:8px}
+    .sinfo{font-size:12px;color:#6b7280;background:#f3f4f6;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.5}
+    /* tab body stacking — all panels share the same grid cell so the card
+       height is always set by the tallest tab, never jumps on switch */
+    .tab-body{display:grid}
+    .tab-body>[role=tabpanel]{grid-area:1/1;min-width:0}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    /* meters tab */
+    #meters{display:flex;gap:24px;flex-wrap:wrap}
+    .msec{flex:1;min-width:180px;background:#f9fafb;border-radius:10px;padding:14px 16px}
+    .msec h2{font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}
+    .mtr{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+    .mtr:last-child{border-bottom:none}
+    .mtr .lbl{color:#6b7280;font-weight:500}
+    .mtr .val{font-weight:700;color:#111;text-align:right}
+    .msub{display:block;font-size:11px;font-weight:400;color:#9ca3af}
+    :focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+    .mbtn:focus-visible{outline:3px solid #1d4ed8;outline-offset:-3px}
+    input[type=range]:focus-visible{outline:3px solid #2563eb;outline-offset:4px;border-radius:3px}
+    .sw input:focus-visible+.sl{outline:3px solid #2563eb;outline-offset:2px;border-radius:26px}
+    @media(min-width:700px){
+      .card{max-width:900px;padding:32px 40px 36px}
+      #ctrl{display:flex;gap:36px;align-items:start}
+      .ctrl-l,.ctrl-r{flex:1;min-width:0}
+      #sdGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      .sday{margin-bottom:0}
+    }
+  </style>
+</head>
+<body>
+<main aria-label="Thermostat control">
+<div class="card">
+  <div class="hdr">
+    <button class="ref" id="rfBtn" title="Refresh" aria-label="Refresh">&#8635;</button>
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+    <h1>Thermostat Control</h1>
+    <span id="authBadge" class="authbadge" title="Scan QR code to enable write access"></span>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab active" id="tab-ctrl" role="tab" aria-selected="true" aria-controls="ctrl" tabindex="0" onclick="showTab('ctrl',this)">Control</button>
+    <button class="tab" id="tab-sched" role="tab" aria-selected="false" aria-controls="sched" tabindex="-1" onclick="showTab('sched',this)">Schedule</button>
+    <button class="tab" id="tab-meters" role="tab" aria-selected="false" aria-controls="meters" tabindex="-1" onclick="showTab('meters',this)">Hour Meters</button>
+  </div>
+
+  <div class="tab-body">
+  <!-- Control tab -->
+  <div id="ctrl" role="tabpanel" aria-labelledby="tab-ctrl" tabindex="0">
+    <div class="ctrl-l">
+      <div class="row">Current Temperature: <b id="curT">Loading...</b></div>
+      <div class="row">Target Temperature: <b id="tgtT">Loading...</b></div>
+      <div class="sldwrap"><label for="sld" class="sr-only">Temperature setpoint</label><input type="range" id="sld" min="60" max="90" value="72" step="1" aria-valuenow="72" aria-valuetext="72 degrees Fahrenheit"/></div>
+    </div>
+    <div class="ctrl-r">
+      <div class="mgrp" role="group" aria-label="Heating and cooling mode">
+        <button class="mbtn" data-m="Off" aria-pressed="false">OFF</button>
+        <button class="mbtn" data-m="Heat" aria-pressed="false">HEAT</button>
+        <button class="mbtn" data-m="Cool" aria-pressed="false">COOL</button>
+      </div>
+      <div class="mstat">Current Mode: <b id="curM">Loading...</b></div>
+      <button class="sbtn" id="setBtn" disabled>SET THERMOSTAT</button>
+      <div class="banner" id="banner" role="alert" aria-live="assertive"></div>
+      <div id="fault" role="alert" style="display:none;margin-top:12px;padding:10px 14px;background:#fee2e2;color:#b91c1c;border-radius:8px;font-size:14px;font-weight:600;align-items:center;gap:10px">
+        <span id="faultTxt"></span>
+        <button onclick="resetFault()" aria-label="Reset fault" style="margin-left:auto;padding:4px 10px;background:#b91c1c;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meters tab -->
+  <div id="meters" role="tabpanel" aria-labelledby="tab-meters" tabindex="0" style="visibility:hidden;pointer-events:none" aria-hidden="true">
+    <div class="msec">
+      <h2>Runtime</h2>
+      <div class="mtr"><span class="lbl">&#x1F525; Heat</span><span class="val" id="mHeat">--</span></div>
+      <div class="mtr"><span class="lbl">&#x2744;&#xFE0F; Cool</span><span class="val" id="mCool">--</span></div>
+    </div>
+    <div class="msec">
+      <h2>Avg Time to Reach Setpoint</h2>
+      <div class="mtr"><span class="lbl">&#x1F525; Heat</span><span class="val" id="mHeatSp">--</span></div>
+      <div class="mtr"><span class="lbl">&#x2744;&#xFE0F; Cool</span><span class="val" id="mCoolSp">--</span></div>
+    </div>
+  </div>
+
+  <!-- Schedule tab -->
+  <div id="sched" role="tabpanel" aria-labelledby="tab-sched" tabindex="0" style="visibility:hidden;pointer-events:none" aria-hidden="true">
+    <div class="sinfo">
+      When enabled, the schedule overrides the setpoint at each period boundary.
+      Manual changes made during a period are kept until the next period starts.
+    </div>
+    <div class="srow">
+      <span class="slbl" id="sEnLbl">Enable Schedule</span>
+      <label class="sw"><input type="checkbox" id="sEn" aria-labelledby="sEnLbl"><span class="sl" aria-hidden="true"></span></label>
+    </div>
+    <div id="sdGrid"></div>
+    <button class="sbtn ready" id="saveSchedBtn" style="margin-top:12px">SAVE SCHEDULE</button>
+    <div class="smsg" id="sMsg" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  </div><!-- /.tab-body -->
+</div></main>
+
+<script>
+  // ── Connection mode detection ────────────────────────────────────────────────
+  // ?api=http://<ip>           → direct device mode (existing behaviour)
+  // ?fb=1                      → Firebase mode via Cloudflare Pages proxy (credentials server-side)
+  // ?fburl=https://…&fbkey=…  → Firebase mode direct (credentials in URL, for local testing)
+  // (no params)                → same-origin /api fallback
+  var params = new URLSearchParams(window.location.search);
+
+  // External-mode Add Device flow:
+  // QR opens external app with ?pair=<http://device-ip/enroll-ext?...>.
+  // Jump to the local pair URL to validate code, then device redirects back
+  // with ?token=<SITE_TOKEN> and this page stores it.
+  var pairParam = params.get('pair') || '';
+  if (pairParam) {
+    window.location.replace(pairParam);
+  }
+
+  var deviceBase = params.get('api') || '';
+  var BASE = deviceBase ? deviceBase + '/api' : '/api';
+
+  var fbUrl = (params.get('fburl') || '').replace(/\/$/, '');
+  var fbKey = params.get('fbkey') || '';
+  var fbProxy = params.get('fb') !== '0';   // default ON; pass ?fb=0 to disable
+  var fbMode = fbProxy || !!(fbUrl && fbKey);
+
+  // ── QR token auth ────────────────────────────────────────────────────────────
+  // Scan a QR code pointing to /?token=<SITE_TOKEN> to authorize this browser.
+  // Token is saved to localStorage — scan once, stay authorized permanently.
+  // Pass ?token=forget to remove access from this browser.
+  var tokenParam = params.get('token') || '';
+  if (tokenParam === 'forget') {
+    localStorage.removeItem('authToken');
+  } else if (tokenParam) {
+    localStorage.setItem('authToken', tokenParam);
+  }
+  // Strip token from URL so it doesn't stay in browser history.
+  if (tokenParam) {
+    var cleanUrl = window.location.pathname + (params.get('fb') === '0' ? '?fb=0' : '');
+    history.replaceState(null, '', cleanUrl);
+  }
+  var authToken = localStorage.getItem('authToken') || '';
+  var authorized = !!authToken;
+  var readOnly = !fbMode || !authorized;
+
+  // Update auth badge in header
+  (function(){
+    var b = document.getElementById('authBadge');
+    if (!fbMode) { b.style.display='none'; return; }
+    if (authorized) { b.textContent='✓ Authorized'; b.className='authbadge auth-on'; b.title='Scan ?token=forget QR to remove access'; }
+    else { b.textContent='Read Only'; b.className='authbadge auth-off'; b.title='Scan QR code to enable write access'; }
+  })();
+
+  // Route Firebase requests through /firebase/… (Worker adds auth server-side)
+  // or directly to the RTDB when fburl+fbkey are provided (local testing).
+  function fbFetch(path, opts) {
+    var isWrite = opts && opts.method && opts.method !== 'GET';
+    if (fbProxy) {
+      var headers = Object.assign({}, (opts && opts.headers) || {});
+      if (isWrite && authToken) headers['X-Auth-Token'] = authToken;
+      return fetch('/firebase' + path, Object.assign({}, opts, { headers })).then(function(r) {
+        if (r.status === 401) {
+          localStorage.removeItem('authToken'); authToken = ''; authorized = false;
+          showError('Access token invalid. Re-scan the QR code to restore write access.');
+        }
+        return r;
+      });
+    }
+    var sep = path.indexOf('?') >= 0 ? '&' : '?';
+    return fetch(fbUrl + path + sep + 'auth=' + fbKey, opts);
+  }
+
+  // ── Mode-aware API wrappers ──────────────────────────────────────────────────
+
+  async function apiGetState() {
+    if (fbMode) {
+      var r = await fbFetch('/thermostat/state.json');
+      if (!r.ok) throw r;
+      var j = await r.json();
+      if (!j) throw new Error('no state in Firebase');
+      return j;
+    }
+    var r = await fetch(BASE + '/state');
+    if (!r.ok) throw r;
+    return await r.json();
+  }
+
+  async function apiPostCommands(setpoint, mode) {
+    if (fbMode) {
+      var cmd = {};
+      if (setpoint !== null) cmd.setpoint = setpoint;
+      if (mode !== null) cmd.mode = mode;
+      var r = await fbFetch('/thermostat/commands.json', {
+        method: 'PATCH',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(cmd)
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    } else {
+      var t = [];
+      if (setpoint !== null && setpoint !== cs)
+        t.push(fetch(BASE + '/setpoint', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({setpoint:setpoint})}));
+      if (mode !== null && mode !== cm)
+        t.push(fetch(BASE + '/mode', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({mode:mode})}));
+      var results = await Promise.all(t);
+      for (var res of results) { if (!res.ok) throw new Error('HTTP ' + res.status); }
+    }
+  }
+
+  async function apiResetFault() {
+    if (fbMode) {
+      await fbFetch('/thermostat/commands.json', {
+        method: 'PATCH',
+        headers: {'content-type': 'application/json'},
+        body: '{"resetFault":true}'
+      });
+    } else {
+      await fetch(BASE + '/resetfault', {method:'POST'});
+    }
+  }
+
+  async function apiGetSchedule() {
+    if (fbMode) {
+      var r = await fbFetch('/thermostat/schedule.json');
+      if (!r.ok) throw r;
+      var j = await r.json();
+      if (!j) throw new Error('no schedule in Firebase');
+      return j;
+    }
+    var r = await fetch(BASE + '/schedule');
+    if (!r.ok) throw r;
+    return await r.json();
+  }
+
+  async function apiGetMeters() {
+    if (fbMode) {
+      var r = await fbFetch('/thermostat/meters.json');
+      if (!r.ok) throw r;
+      var j = await r.json();
+      if (!j) throw new Error('no meters in Firebase');
+      return j;
+    }
+    var r = await fetch(BASE + '/meters');
+    if (!r.ok) throw r;
+    return await r.json();
+  }
+
+  async function apiSaveSchedule(payload) {
+    if (fbMode) {
+      // Write to commands node — device picks up and applies within sync interval.
+      var r = await fbFetch('/thermostat/commands.json', {
+        method: 'PATCH',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({schedule: payload})
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    } else {
+      var r = await fetch(BASE + '/schedule', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    }
+  }
+
+  // ── App state ────────────────────────────────────────────────────────────────
+
+  var pm=null, ps=null, cs=72, cm=null, curTab='ctrl';
+  var sld=document.getElementById('sld');
+  var setBtn=document.getElementById('setBtn');
+  var banner=document.getElementById('banner');
+  var mbtns=document.querySelectorAll('.mbtn');
+
+  var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var PERIODS=['morning','day','night'];
+  var PLBLS=['Morning','Day','Night'];
+
+  function pad2(n){return n<10?'0'+n:''+n}
+  function fmtHours(s){var h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h+'h '+pad2(m)+'m'}
+  function fmtMin(s){var m=Math.floor(s/60);return m+' min'}
+  function track(){var p=((sld.value-sld.min)/(sld.max-sld.min))*100;sld.style.background='linear-gradient(to right,#2563eb 0%,#2563eb '+p+'%,#d1d5db '+p+'%,#d1d5db 100%)';sld.setAttribute('aria-valuenow',sld.value);sld.setAttribute('aria-valuetext',sld.value+' degrees Fahrenheit')}
+  function setAM(m){mbtns.forEach(function(b){var on=b.dataset.m===m;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on))})}
+  function chkDirty(){var d=!readOnly&&((ps!==null&&ps!==cs)||(pm!==null&&pm!==cm));setBtn.disabled=!d;setBtn.classList.toggle('ready',d)}
+  function showError(msg){banner.textContent=msg;banner.classList.add('show');setTimeout(function(){banner.classList.remove('show')},4000)}
+
+  function showTab(id,btn){
+    curTab=id;
+    ['ctrl','sched','meters'].forEach(function(p){
+      var panel=document.getElementById(p);var show=p===id;
+      panel.style.visibility=show?'visible':'hidden';panel.style.pointerEvents=show?'':'none';
+      panel.setAttribute('aria-hidden',show?'false':'true');
+    });
+    document.querySelectorAll('.tab').forEach(function(t){
+      var sel=t===btn;t.classList.toggle('active',sel);
+      t.setAttribute('aria-selected',String(sel));t.setAttribute('tabindex',sel?'0':'-1');
+    });
+    if(id==='sched') loadSched();
+    if(id==='meters') refreshMeters();
+  }
+
+  function buildSchedGrid(data){
+    document.getElementById('sEn').checked=data.enabled;
+    var html='';
+    for(var d=0;d<7;d++){
+      html+='<div class="sday"><div class="sdayname">'+DAYS[d]+'</div>';
+      for(var p=0;p<3;p++){
+        var pk=PERIODS[p]; var per=data.days[d][pk];
+        var tv=pad2(per.h)+':'+pad2(per.min);
+        var dis=readOnly?' disabled':'';
+        html+='<div class="speriod"><span class="splbl" aria-hidden="true">'+PLBLS[p]+'</span>'
+          +'<input type="time" class="stinp" data-d="'+d+'" data-p="'+pk+'" value="'+tv+'" aria-label="'+DAYS[d]+' '+PLBLS[p]+' start time"'+dis+'>'
+          +'<input type="number" class="sspinp" data-d="'+d+'" data-p="'+pk+'" min="60" max="90" step="1" value="'+Math.round(per.sp)+'" aria-label="'+DAYS[d]+' '+PLBLS[p]+' setpoint in Fahrenheit"'+dis+'>'
+          +'<span class="spunit" aria-hidden="true">\xb0F</span></div>';
+      }
+      html+='</div>';
+    }
+    document.getElementById('sdGrid').innerHTML=html;
+  }
+
+  async function loadSched(){
+    try{
+      var data = await apiGetSchedule();
+      buildSchedGrid(data);
+    }catch(e){
+      console.warn(e);
+      var msg = (e && e.message && e.message.indexOf('no schedule')>=0)
+        ? 'No schedule saved yet. Save one from the device first.'
+        : 'Cannot load schedule.';
+      document.getElementById('sdGrid').innerHTML='<p style="color:#6b7280;font-size:0.9rem;padding:8px 0">'+msg+'</p>';
+    }
+  }
+
+  document.getElementById('saveSchedBtn').addEventListener('click',async function(){
+    if(readOnly)return;
+    var btn=this;
+    var pay={enabled:document.getElementById('sEn').checked,days:[]};
+    for(var d=0;d<7;d++){
+      var dayObj={};
+      for(var p=0;p<3;p++){
+        var pk=PERIODS[p];
+        var ti=document.querySelector('input[data-d="'+d+'"][data-p="'+pk+'"][type=time]');
+        var si=document.querySelector('input[data-d="'+d+'"][data-p="'+pk+'"][type=number]');
+        if(!ti||!si){showError('Load the schedule first.');return;}
+        var parts=(ti.value||'00:00').split(':');
+        dayObj[pk]={h:parseInt(parts[0])||0,min:parseInt(parts[1])||0,sp:parseFloat(si.value)||70};
+      }
+      pay.days.push(dayObj);
+    }
+    btn.disabled=true;btn.textContent='SAVING…';
+    try{
+      await apiSaveSchedule(pay);
+      btn.textContent='SAVED ✓';
+      var m=document.getElementById('sMsg');
+      m.textContent = fbMode ? 'Sent — device will apply within ~30s' : 'Saved!';
+      setTimeout(function(){m.textContent='';btn.textContent='SAVE SCHEDULE';btn.disabled=false},3000);
+    }catch(e){
+      btn.textContent='SAVE SCHEDULE';btn.disabled=false;
+      showError('Could not save schedule. Check network.');console.warn(e);
+    }
+  });
+
+  if(readOnly){
+    sld.disabled=true;
+    mbtns.forEach(function(b){b.disabled=true});
+    document.getElementById('saveSchedBtn').disabled=true;
+    document.getElementById('sEn').disabled=true;
+    document.querySelectorAll('.stinp,.sspinp').forEach(function(i){i.disabled=true});
+  }
+  sld.addEventListener('input',function(){if(readOnly)return;ps=Number(sld.value);document.getElementById('tgtT').textContent=sld.value+' \xb0F';track();chkDirty()});
+  mbtns.forEach(function(b){b.addEventListener('click',function(){if(readOnly)return;pm=b.dataset.m;setAM(pm);chkDirty()})});
+  document.getElementById('rfBtn').addEventListener('click',function(){if(curTab==='sched')loadSched();else if(curTab==='meters')refreshMeters();else refresh()});
+
+  setBtn.addEventListener('click',async function(){
+    if(setBtn.disabled)return;
+    try{
+      var sp = (ps!==null&&ps!==cs) ? ps : null;
+      var mode = (pm!==null&&pm!==cm) ? pm : null;
+      await apiPostCommands(sp, mode);
+      if(fbMode){
+        // Optimistic update — device will apply within FIREBASE_SYNC_INTERVAL_MS.
+        if(sp!==null){cs=sp;document.getElementById('tgtT').textContent=sp+' \xb0F';}
+        if(mode!==null){cm=mode;setAM(mode);}
+        ps=null;pm=null;chkDirty();
+      }else{
+        ps=null;pm=null;await refresh();
+      }
+    }catch(e){showError('Could not reach device. Check network.');console.warn(e)}
+  });
+
+  async function refresh(){
+    try{
+      var j=await apiGetState();
+      cs=j.setpointF;cm=j.mode;
+      document.getElementById('curT').textContent=j.roomTempF.toFixed(1)+' \xb0F';
+      document.getElementById('tgtT').textContent=j.setpointF+' \xb0F';
+      document.getElementById('curM').textContent=j.mode;
+      var fd=document.getElementById('fault');
+      if(j.fault){document.getElementById('faultTxt').textContent='\u26a0 Fault: '+j.faultMsg;fd.style.display='flex';}else{fd.style.display='none';}
+      if(ps===null){sld.value=j.setpointF;track()}
+      if(pm===null)setAM(j.mode);
+      chkDirty();
+    }catch(e){showError('Cannot connect to device.');console.warn(e)}
+  }
+
+  async function refreshMeters(){
+    try{
+      var j=await apiGetMeters();
+      document.getElementById('mHeat').textContent=fmtHours(j.heatRunSec);
+      document.getElementById('mCool').textContent=fmtHours(j.coolRunSec);
+      var hsp=j.avgHeatSetptSec?fmtMin(j.avgHeatSetptSec)+'<span class="msub">'+j.heatCycles+' cycles</span>':'--';
+      var csp=j.avgCoolSetptSec?fmtMin(j.avgCoolSetptSec)+'<span class="msub">'+j.coolCycles+' cycles</span>':'--';
+      document.getElementById('mHeatSp').innerHTML=hsp;
+      document.getElementById('mCoolSp').innerHTML=csp;
+    }catch(e){showError('Cannot load meters.');console.warn(e)}
+  }
+
+  async function resetFault(){
+    try{await apiResetFault();if(!fbMode)await refresh();}catch(e){showError('Could not reach device.');console.warn(e)}
+  }
+
+  track();refresh();setInterval(function(){if(curTab==='meters')refreshMeters();else if(curTab!=='sched')refresh();},fbMode?10000:5000);
+  document.querySelector('[role=tablist]').addEventListener('keydown',function(e){
+    var tabs=Array.from(document.querySelectorAll('[role=tab]'));
+    var idx=tabs.indexOf(document.activeElement);if(idx<0)return;
+    var next=-1;
+    if(e.key==='ArrowRight')next=(idx+1)%tabs.length;
+    else if(e.key==='ArrowLeft')next=(idx+tabs.length-1)%tabs.length;
+    else if(e.key==='Home')next=0;
+    else if(e.key==='End')next=tabs.length-1;
+    if(next>=0){e.preventDefault();tabs[next].focus();tabs[next].click();}
+  });
+</script>
+</body>
+</html>

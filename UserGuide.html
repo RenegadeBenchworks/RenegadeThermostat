@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RenegadeThermostat — User Guide</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --heat: #f0883e;
+      --cool: #58a6ff;
+      --off: #6e7681;
+      --fault: #da3633;
+      --green: #3fb950;
+      --radius: 10px;
+      --shadow: 0 4px 20px rgba(0,0,0,.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── header ── */
+    header {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 2rem 2rem;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    header p {
+      margin-top: .4rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    /* ── nav sidebar / TOC ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 0;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    nav.toc {
+      position: sticky;
+      top: 1.5rem;
+      align-self: start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      font-size: .88rem;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+    }
+    nav.toc h3 {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: .72rem;
+      color: var(--muted);
+      margin-bottom: .8rem;
+    }
+    nav.toc ol {
+      list-style: none;
+      padding: 0;
+    }
+    nav.toc li { margin-bottom: .35rem; }
+    nav.toc a {
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    nav.toc a:hover { color: var(--accent); }
+
+    /* ── main content ── */
+    main {
+      padding-left: 2rem;
+      min-width: 0;
+    }
+    section {
+      margin-bottom: 3rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--accent);
+      padding-bottom: .4rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.2rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin: 1.2rem 0 .5rem;
+    }
+    p { margin-bottom: .9rem; color: var(--fg); }
+
+    /* ── screen mockup ── */
+    .screen-mockup {
+      background: #000;
+      border: 3px solid #333;
+      border-radius: 8px;
+      padding: 2px;
+      max-width: 480px;
+      margin: 1.5rem auto;
+      box-shadow: var(--shadow);
+      font-family: "Courier New", monospace;
+      font-size: .72rem;
+    }
+    .screen-inner {
+      background: #111;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .screen-statusbar {
+      background: #1a2a1a;
+      color: #4caf50;
+      padding: 4px 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: .7rem;
+    }
+    .screen-banner {
+      background: #1a1a00;
+      color: #ffa500;
+      text-align: center;
+      padding: 3px;
+      font-size: .7rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .screen-body {
+      display: grid;
+      grid-template-columns: 90px 1fr 110px;
+      min-height: 130px;
+      border-top: 1px solid #222;
+    }
+    .screen-col {
+      padding: 8px;
+      border-right: 1px solid #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .screen-col:last-child { border-right: none; }
+    .btn-up, .btn-down {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #e0e0e0;
+      padding: 4px 12px;
+      font-family: monospace;
+      font-size: .8rem;
+      cursor: default;
+    }
+    .temp-big { font-size: 1.8rem; color: #ffffff; font-weight: bold; }
+    .temp-set { color: #aaaaaa; font-size: .75rem; }
+    .mode-btn {
+      width: 80px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 4px;
+      text-align: center;
+      font-size: .7rem;
+      color: #888;
+    }
+    .mode-btn.active-cool { background: #003366; color: #58a6ff; border-color: #58a6ff; }
+    .mode-btn.active-heat { background: #3d1a00; color: #f0883e; border-color: #f0883e; }
+    .mode-btn.active-fan  { background: #003333; color: #22d3ee; border-color: #22d3ee; }
+    .mode-btn.active-off  { background: #1e1e1e; color: #888; border-color: #555; }
+    .screen-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid #222;
+      font-size: .65rem;
+      color: #aaa;
+    }
+    .screen-footer-cell {
+      padding: 6px 10px;
+      border-right: 1px solid #222;
+    }
+    .screen-footer-cell:last-child { border-right: none; }
+
+    /* ── tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.2rem;
+      font-size: .92rem;
+    }
+    th {
+      text-align: left;
+      padding: .55rem .75rem;
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: .55rem .75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ── callout boxes ── */
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: .8rem 1rem;
+      margin: 1rem 0;
+      font-size: .9rem;
+      color: var(--fg);
+    }
+    .callout.warn  { border-color: var(--heat); }
+    .callout.fault { border-color: var(--fault); }
+
+    /* ── steps ── */
+    ol.steps {
+      padding-left: 1.4rem;
+      margin-bottom: 1rem;
+    }
+    ol.steps li {
+      margin-bottom: .45rem;
+      padding-left: .3rem;
+    }
+
+    /* ── code / URL ── */
+    code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .1em .4em;
+      font-size: .88em;
+      color: #79c0ff;
+    }
+
+    /* ── badge chips ── */
+    .chip {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    .chip-heat { background: #3d1a00; color: var(--heat); border: 1px solid var(--heat); }
+    .chip-cool { background: #003366; color: var(--cool); border: 1px solid var(--cool); }
+    .chip-off  { background: #1e1e1e; color: var(--off);  border: 1px solid var(--off); }
+    .chip-fan  { background: #111; color: #22d3ee; border: 1px solid #22d3ee; }
+
+    /* ── weather icons section ── */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1.2rem 0;
+    }
+    .icon-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      transition: border-color .2s;
+    }
+    .icon-card:hover { border-color: var(--accent); }
+    .icon-emoji {
+      font-size: 2.8rem;
+      line-height: 1;
+      min-width: 52px;
+      text-align: center;
+    }
+    .icon-card h4 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: .3rem;
+    }
+    .icon-card p {
+      font-size: .85rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .icon-card .trigger {
+      font-size: .75rem;
+      color: var(--fg);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .25rem .6rem;
+      margin-top: .5rem;
+      display: inline-block;
+    }
+
+    /* ── fault bar demo ── */
+    .fault-bar {
+      background: var(--fault);
+      color: #fff;
+      border-radius: 6px;
+      padding: .5rem 1rem;
+      font-size: .9rem;
+      font-weight: 600;
+      margin: .8rem 0;
+    }
+
+    /* ── quick ref cards ── */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: .8rem;
+      margin-top: .8rem;
+    }
+    .quick-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .9rem 1rem;
+    }
+    .quick-card .task { font-weight: 600; color: var(--accent); font-size: .9rem; }
+    .quick-card .how  { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: .82rem;
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    /* ── responsive ── */
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      nav.toc { display: none; }
+      main { padding-left: 0; }
+      header h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RenegadeThermostat</h1>
+  <p>User Guide &mdash; Everything you need to know to use your smart camper thermostat</p>
+</header>
+
+<div class="layout">
+
+  <!-- ── TABLE OF CONTENTS ── -->
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#home-screen">1. Home Screen</a></li>
+      <li><a href="#temperature">2. Setting Temperature</a></li>
+      <li><a href="#modes">3. Choosing a Mode</a></li>
+      <li><a href="#banner">4. Mode Banner</a></li>
+      <li><a href="#faults">5. Fault Alerts</a></li>
+      <li><a href="#settings">6. Settings</a></li>
+      <li><a href="#system">7. System Page</a></li>
+      <li><a href="#web">8. Web Interface</a></li>
+      <li><a href="#external-web">9. External Web UI</a></li>
+      <li><a href="#device-auth">10. Authorizing Devices</a></li>
+      <li><a href="#schedule">11. Temperature Schedule</a></li>
+      <li><a href="#wifi-tips">12. Wi-Fi Tips</a></li>
+      <li><a href="#weather-icons">13. Weather Icons</a></li>
+      <li><a href="#quick-ref">14. Quick Reference</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- ── 1. HOME SCREEN ── -->
+    <section id="home-screen">
+      <h2>1. What You See on the Main Screen</h2>
+      <p>
+        When the thermostat powers on it shows the <strong>Home screen</strong>. The screen is divided
+        into several areas:
+      </p>
+
+      <!-- Screen mockup -->
+      <div class="screen-mockup">
+        <div class="screen-inner">
+          <div class="screen-statusbar">
+            <span>&#x2B24; WiFi &nbsp; 192.168.1.42</span>
+            <span>[ Settings ]</span>
+          </div>
+          <div class="screen-banner">&#9650; HEATING</div>
+          <div class="screen-body">
+            <div class="screen-col">
+              <div class="btn-up">&#9650; +1°</div>
+              <div style="color:#555; font-size:.65rem;">tap to raise</div>
+              <div class="btn-down">&#9660; -1°</div>
+            </div>
+            <div class="screen-col">
+              <div style="color:#888; font-size:.7rem;">Inside</div>
+              <div class="temp-big">72°F</div>
+              <div class="temp-set">Set &nbsp; 70°F</div>
+            </div>
+            <div class="screen-col">
+              <div class="mode-btn">Cool</div>
+              <div class="mode-btn active-heat">Heat</div>
+              <div class="mode-btn">Fan</div>
+              <div class="mode-btn">Off</div>
+            </div>
+          </div>
+          <div class="screen-footer">
+            <div class="screen-footer-cell">
+              &#x26C5; Partly Cloudy<br>58°F &nbsp; H:65 L:44
+            </div>
+            <div class="screen-footer-cell">
+              &#x1F305; Sunrise 6:42 AM<br>&#x1F307; Sunset &nbsp; 7:58 PM
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Area</th><th>What it shows</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Top bar</strong></td><td>Wi-Fi connection status and the device's IP address</td></tr>
+          <tr><td><strong>Mode banner</strong></td><td>What the system is currently doing: Heating, Cooling, or Off</td></tr>
+          <tr><td><strong>▲ / ▼ buttons</strong></td><td>Raise or lower the target temperature by 1 °F per tap</td></tr>
+          <tr><td><strong>Center card</strong></td><td>Current room temperature and the target (set) temperature</td></tr>
+          <tr><td><strong>Mode selector</strong></td><td>Four buttons — Cool, Heat, Fan, Off — tap one to switch</td></tr>
+          <tr><td><strong>Bottom left</strong></td><td>Outside weather fetched from the internet</td></tr>
+          <tr><td><strong>Bottom right</strong></td><td>Today's sunrise and sunset times</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── 2. SETTING TEMPERATURE ── -->
+    <section id="temperature">
+      <h2>2. Setting the Temperature</h2>
+      <ol class="steps">
+        <li>Tap <strong>▲</strong> (up arrow, left side) to raise the target temperature.</li>
+        <li>Tap <strong>▼</strong> (down arrow, left side) to lower it.</li>
+        <li>The center card updates immediately to show the new target.</li>
+      </ol>
+      <p>
+        The thermostat will automatically turn on heat or cooling as needed to reach
+        the target temperature and turn off once it gets there.
+      </p>
+    </section>
+
+    <!-- ── 3. MODES ── -->
+    <section id="modes">
+      <h2>3. Choosing a Mode</h2>
+      <p>Tap one of the four buttons on the right side of the screen:</p>
+      <table>
+        <thead><tr><th>Button</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="chip chip-cool">Cool</span></td>
+            <td>Turns on air conditioning when the room is too warm</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-heat">Heat</span></td>
+            <td>Turns on the heater when the room is too cold</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-fan">Fan</span></td>
+            <td>Runs the fan only &mdash; no heating or cooling</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-off">Off</span></td>
+            <td>Everything off &mdash; no heating, cooling, or fan</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Cool, Heat, and Off buttons fill with their highlight color when selected
+        (<span class="chip chip-cool">blue for Cool</span>,
+        <span class="chip chip-heat">orange for Heat</span>,
+        <span class="chip chip-off">gray for Off</span>).
+        The <span class="chip chip-fan">Fan</span> button stays dark &mdash; only the label
+        and speed text turn <strong style="color:#22d3ee">cyan</strong> when active.
+      </p>
+      <div class="callout">
+        <strong>Tip:</strong> The thermostat always starts in <strong>Off</strong> mode after a
+        power cycle. Remember to choose your mode after startup.
+      </div>
+
+      <h3>Fan Speed</h3>
+      <p>
+        When <strong>Fan</strong> mode is active, the fan runs at <strong>Low</strong> speed by
+        default. Tap the <strong>Fan</strong> button again to toggle between
+        <strong>Low</strong> and <strong>High</strong> speed. The current speed is shown as a
+        small cyan label inside the Fan button.
+      </p>
+      <p>
+        Fan speed also applies when the <strong>AC compressor is running</strong> in Cool
+        mode &mdash; the fan relay switches to match your High / Low selection.
+      </p>
+
+      <h3>AC Compressor Restart Delay</h3>
+      <p>
+        After the air conditioning compressor has run, the thermostat enforces a
+        <strong>~3-minute wait</strong> before it can restart. This protects the compressor:
+      </p>
+      <div class="callout">
+        When an air conditioner is in operation, its compressor circulates refrigerant under
+        high pressure. Once off, it will take two to three minutes for this high pressure to
+        equalize. The air conditioning compressor is unable to start against high pressure.
+        Therefore, once the air conditioner is turned off, it is important to leave it off
+        for ~3&nbsp;min. before restarting.
+      </div>
+      <p>
+        If you switch between modes without the compressor ever actually running (for example,
+        cycling Heat &rarr; Cool while the temperature is already at the setpoint), only the
+        normal 20-second anti-short-cycle delay applies.
+      </p>
+    </section>
+
+    <!-- ── 4. BANNER ── -->
+    <section id="banner">
+      <h2>4. Understanding the Top Banner</h2>
+      <p>The banner just below the status bar tells you what the system is doing right now:</p>
+      <table>
+        <thead><tr><th>Banner text</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip chip-off">Off</span></td><td>Mode is set to Off — no HVAC running</td></tr>
+          <tr><td><span class="chip chip-heat">Heating</span></td><td>Heat mode is selected and the heater may run</td></tr>
+          <tr><td><span class="chip chip-cool">Cooling</span></td><td>Cool mode is selected and the AC may run</td></tr>
+          <tr><td><span class="chip chip-fan">Fan On</span></td><td>Fan mode is active — fan running, no heating or cooling</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── 5. FAULTS ── -->
+    <section id="faults">
+      <h2>5. Fault Alerts</h2>
+      <p>
+        If something goes wrong (for example, a relay did not respond), a
+        <strong style="color:var(--fault)">red bar</strong> appears on the home screen with a
+        short description of the problem:
+      </p>
+      <div class="fault-bar">&#9888; Relay fault detected — heating disabled</div>
+      <p>While a fault is active:</p>
+      <ul style="padding-left:1.4rem; margin-bottom:.9rem;">
+        <li>The heater and air conditioner are both turned off for safety.</li>
+        <li>You cannot resume until the fault is cleared.</li>
+      </ul>
+      <h3>Clearing a fault</h3>
+      <ol class="steps">
+        <li>Tap any mode button on the home screen, <strong>or</strong></li>
+        <li>Go to <strong>Settings → System</strong> and tap <strong>Reset Fault</strong>.</li>
+      </ol>
+      <div class="callout warn">
+        If the fault comes back repeatedly, check that the heater or AC unit is powered and responding.
+      </div>
+    </section>
+
+    <!-- ── 6. SETTINGS ── -->
+    <section id="settings">
+      <h2>6. Settings Screen</h2>
+      <p>
+        Tap <strong>Settings</strong> in the top-right corner of the home screen to open the
+        settings menu.
+      </p>
+      <table>
+        <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>WiFi SSID</strong></td><td>Change the Wi-Fi network name</td></tr>
+          <tr><td><strong>WiFi Password</strong></td><td>Change the Wi-Fi password</td></tr>
+          <tr><td><strong>Reconnect WiFi</strong></td><td>Force a reconnection attempt right now</td></tr>
+          <tr><td><strong>System</strong></td><td>Open the System / diagnostics page (see below)</td></tr>
+          <tr><td><strong>Calibrate Touch</strong></td><td>Re-calibrate the touchscreen if taps feel off</td></tr>
+          <tr><td><strong>Web: External</strong></td><td>Toggle between the built-in and externally hosted web interface</td></tr>
+          <tr><td><strong>Add Device</strong></td><td>Open the device authorization screen — generate a QR code to authorize a browser for remote control</td></tr>
+        </tbody>
+      </table>
+      <p>Tap the back arrow or home area to return to the main screen.</p>
+    </section>
+
+    <!-- ── 7. SYSTEM ── -->
+    <section id="system">
+      <h2>7. System (Diagnostics) Page</h2>
+      <p>Go to <strong>Settings → System</strong> to see detailed information about the thermostat's health.</p>
+      <h3>What you can see</h3>
+      <ul style="padding-left:1.4rem; margin-bottom:.9rem;">
+        <li><strong>Firmware build date</strong> and the device's current <strong>IP address</strong></li>
+        <li><strong>Heat runtime</strong> — total hours the heater has run</li>
+        <li><strong>Cool runtime</strong> — total hours the AC has run</li>
+        <li><strong>Average time to reach setpoint</strong> (separately for heat and cool)</li>
+        <li><strong>Average time to change temperature by 1 °F</strong> (heat and cool)</li>
+      </ul>
+      <h3>What you can do</h3>
+      <ul style="padding-left:1.4rem; margin-bottom:.9rem;">
+        <li><strong>Reset stats</strong> — tap and hold the left card (heat) or right card (cool) to clear those counters</li>
+        <li><strong>Reset Fault</strong> — tap this button if a fault is active and you have resolved the underlying issue</li>
+      </ul>
+    </section>
+
+    <!-- ── 8. WEB INTERFACE ── -->
+    <section id="web">
+      <h2>8. Web Interface — Control from Your Phone or Computer</h2>
+      <p>
+        You can control the thermostat from any device on the same Wi-Fi network
+        — no app required.
+      </p>
+
+      <h3>Finding the Address</h3>
+      <p>
+        The device's IP address is shown in the <strong>top bar</strong> on the home screen
+        (e.g. <code>192.168.1.42</code>) and on the <strong>System</strong> page.
+      </p>
+
+      <h3>Opening the Web Page</h3>
+      <p>
+        On your phone, tablet, or computer — while on the same Wi-Fi network — open a browser and go to:
+      </p>
+      <p style="text-align:center; font-size:1.1rem; margin: 1rem 0;">
+        <code>http://192.168.1.42</code>
+      </p>
+      <p>(Replace <code>192.168.1.42</code> with the address shown on your device.)</p>
+
+      <h3>What the Web Page Shows</h3>
+      <table>
+        <thead><tr><th>Element</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Current temperature</strong></td><td>Displayed at the top of the page</td></tr>
+          <tr><td><strong>Slider</strong></td><td>Drag to choose your target temperature</td></tr>
+          <tr><td><strong>OFF / HEAT / COOL buttons</strong></td><td>Pick the operating mode</td></tr>
+          <tr><td><strong>SET THERMOSTAT button</strong></td><td>Becomes active when you make a change; tap it to send new settings to the device</td></tr>
+          <tr><td><strong>Red alert bar</strong></td><td>Appears if there is a fault, with a short description</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        The page refreshes automatically every 5 seconds so it always shows the latest readings.
+      </div>
+    </section>
+
+    <!-- ── 9. EXTERNAL WEB ── -->
+    <section id="external-web">
+      <h2>9. Externally Hosted Web Interface</h2>
+      <p>
+        If someone has set up a version of the control page on the internet, you can access it from
+        <strong>anywhere</strong> — not just your local Wi-Fi.
+      </p>
+
+      <h3>Enabling It</h3>
+      <ol class="steps">
+        <li>On the thermostat, tap <strong>Settings</strong>.</li>
+        <li>Tap <strong>Web: External</strong> to toggle it <strong>ON</strong>.</li>
+        <li>The setting is saved automatically and survives restarts.</li>
+      </ol>
+
+      <h3>Using It</h3>
+      <p>
+        When "Web: External" is ON, opening the device's IP address in a browser will automatically
+        redirect you to the external page. That page connects back to your thermostat over your local
+        network.
+      </p>
+
+      <h3>Switching Back</h3>
+      <p>
+        Tap <strong>Web: External</strong> again in Settings to toggle it <strong>OFF</strong>.
+        The device will go back to serving its own built-in page.
+      </p>
+
+      <div class="callout">
+        <strong>Note:</strong> The external page only works when your phone or computer is on the same
+        Wi-Fi network as the thermostat (or if your network is set up for remote access). It just means
+        the page files are loaded from the internet rather than from the device itself.
+      </div>
+    </section>
+
+    <!-- ── 10. DEVICE AUTHORIZATION ── -->
+    <section id="device-auth">
+      <h2>10. Authorizing a Device for Web Control</h2>
+      <p>
+        If you are using the <strong>externally hosted web interface</strong>, each browser or
+        device needs to be authorized before it can make changes. Without authorization the page
+        opens in <strong>Read Only</strong> mode — you can see the current state but cannot
+        send commands.
+      </p>
+
+      <h3>Why Authorization Is Required</h3>
+      <p>
+        The external web page is accessible from anywhere on the internet. Authorization ensures
+        that only devices you approve can control your thermostat.
+      </p>
+
+      <h3>How to Authorize</h3>
+      <ol class="steps">
+        <li>On the thermostat, tap <strong>Settings</strong>.</li>
+        <li>Tap <strong>Add Device</strong>.</li>
+        <li>A screen appears showing a 6-character code and a <strong>QR code</strong>.</li>
+        <li>On your phone or computer, scan the QR code with your camera or a QR reader app.
+            This opens the external web page with your authorization token already set.</li>
+        <li>The web page will show a green <strong>&#10003; Authorized</strong> badge — you now have full control.</li>
+      </ol>
+      <p>
+        The code is valid for <strong>5 minutes</strong>. If it expires, go back to
+        <strong>Settings &rarr; Add Device</strong> to generate a new one.
+      </p>
+      <div class="callout">
+        <strong>Note:</strong> Each browser or app on each device needs its own authorization.
+        If you use two different browsers on the same phone, authorize each one separately.
+      </div>
+
+      <h3>Authorization Badge</h3>
+      <table>
+        <thead><tr><th>Badge</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--green)">&#10003; Authorized</strong></td>
+            <td>Full control — you can change the setpoint, mode, and schedule</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--heat)">Read Only</strong></td>
+            <td>View only — changes are not sent to the device</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Removing Authorized Devices</h3>
+      <p>
+        Up to <strong>8</strong> devices can be authorized at the same time.
+        To remove all authorizations at once:
+      </p>
+      <ol class="steps">
+        <li>Tap <strong>Settings &rarr; Add Device</strong>.</li>
+        <li>Press and <strong>hold</strong> the <strong>Hold: Remove All</strong> button for 1.5 seconds.</li>
+        <li>All authorized devices are removed. Any previously authorized browser will revert to Read Only mode.</li>
+      </ol>
+      <p>To re-authorize a browser, repeat the QR scan process.</p>
+    </section>
+
+    <!-- ── 11. TEMPERATURE SCHEDULE ── -->
+    <section id="schedule">
+      <h2>11. Temperature Schedule</h2>
+      <p>
+        The thermostat can automatically adjust the setpoint throughout the day
+        using a weekly schedule. Three periods are available for every day of the
+        week: <strong>Morning</strong>, <strong>Day</strong>, and <strong>Night</strong>.
+      </p>
+
+      <h3>How the Schedule Works</h3>
+      <p>
+        When the schedule is enabled the device checks the current time every
+        minute. When a new period begins, the setpoint is automatically updated
+        to the temperature you configured for that period.
+      </p>
+      <div class="callout">
+        <strong>Manual overrides are respected.</strong> If you manually change
+        the setpoint during, say, the Day period, your change is kept until the
+        Night period starts — the schedule only takes effect at period
+        boundaries, not while you are within the same period.
+      </div>
+
+      <h3>Default Period Times &amp; Temperatures</h3>
+      <table>
+        <thead><tr><th>Period</th><th>Default start</th><th>Default setpoint</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Morning</strong></td><td>07:00</td><td>70 °F</td></tr>
+          <tr><td><strong>Day</strong></td><td>09:00</td><td>72 °F</td></tr>
+          <tr><td><strong>Night</strong></td><td>22:00</td><td>68 °F</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Enabling &amp; Configuring the Schedule</h3>
+      <p>The schedule is configured from the <strong>Schedule</strong> tab on the web interface
+      (either the built-in page or the external page).</p>
+      <ol class="steps">
+        <li>Open the web interface in a browser (<code>http://&lt;device IP&gt;</code>).</li>
+        <li>Tap the <strong>Schedule</strong> tab at the top of the page.</li>
+        <li>Toggle <strong>Enable Schedule</strong> on.</li>
+        <li>For each day (Mon – Sun), set the start time and target temperature
+          for Morning, Day, and Night.</li>
+        <li>Tap <strong>SAVE SCHEDULE</strong>. The settings are saved to the
+          device and survive power loss.</li>
+      </ol>
+
+      <h3>Time Sync Requirement</h3>
+      <p>
+        The schedule relies on the device's clock, which is synced via the
+        internet (NTP) each time it connects to Wi-Fi. The schedule does not
+        activate until the clock is set. This normally happens within a few
+        seconds of the Wi-Fi connection being established.
+      </p>
+      <p>
+        <strong>Heating and cooling still work normally without a valid clock</strong>
+        — only the automatic schedule is paused until NTP succeeds.
+      </p>
+    </section>
+
+    <!-- ── 11. WI-FI TIPS ── -->
+    <section id="wifi-tips">
+      <h2>12. Wi-Fi Tips</h2>
+      <ul style="padding-left:1.4rem; margin-bottom:.9rem;">
+        <li>The thermostat connects to Wi-Fi automatically on startup using the saved SSID and password.</li>
+        <li>The top bar shows a Wi-Fi icon when connected, and turns <strong style="color:var(--fault)">red</strong> when disconnected.</li>
+        <li>If the connection is lost, go to <strong>Settings → Reconnect WiFi</strong> to try again without restarting.</li>
+        <li>Weather and the web interface both require Wi-Fi. <strong>Heating and cooling still work without it.</strong></li>
+      </ul>
+    </section>
+
+    <!-- ── 11. WEATHER ICONS ── -->
+    <section id="weather-icons">
+      <h2>13. Weather Icons Guide</h2>
+      <p>
+        The bottom-left corner of the home screen shows one of five animated face icons depending on
+        the outside weather. A <strong>Weather Guide</strong> page is also accessible from the device
+        screen. Here is what each icon means:
+      </p>
+
+      <div class="icon-grid">
+
+        <div class="icon-card">
+          <div class="icon-emoji"><img src="data:image/png;base64,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" alt="Melty face icon" width="45" height="45" aria-hidden="true" style="image-rendering:pixelated"></div>
+          <div>
+            <h4>Melty Face</h4>
+            <p>It is dangerously hot outside. The steering wheel is now lava.</p>
+            <span class="trigger">Shown when: outside temp &ge; 85 °F</span>
+          </div>
+        </div>
+
+        <div class="icon-card">
+          <div class="icon-emoji"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIcAAACHCAYAAAA850oKAAANFElEQVR4nO2dIXDbzBaFt28CBAwEAgQCBAoECgQCDAIMCgwKAgoCCgJ+UFBQEBBQEPBAQEFAQUBBQIFBgUGAQUBAgUFAQIFBgEGBQYBAgEBm3mO533b2juUmbvvPnIO2ympXVnfu0b3n7t0QBEEQBEEQBEEQBEEQBEEQBEEQhK54Fv4QshD+51xP99941FyGe2vuV9Yuc2sfT9M3t7h3VTTOMxBth3Ha3/h/9p/fNZHw74MWh+DiEcZ6PVRC+ig8k7viU+fsf2fN4aB8aJegmPF0/tBuHFppPZrAXC06DTDOHP0XHlU5c/EdrptiZDkEF1ocwu+lFY8+oj4by72Jwx1rL2BbR9fWzvPlXgB/JdgjVMO+PUO1eGgPtoxWppi3JWU4U7Wgrd0XaNtUYf8sPWZDKuH76UAx0TM8Ed3IcggutDiE9dNKp6CWQyWRNwETSk/h7bH9ozgy4zoGxWT5cqqCgxKyGra+mFgf0Nn8Mv1jGlIMPaDa2nuf7IFmoygMlvztXTwgz4sJa/BoZDkEF1ocwnpoZdWglksxbPesvfjBgezu3U/WLj+auZ58Sz9EDvtbD8A9W+CA1lyI6hX6g7YWHBNUMti2dv8YVLU5s3tnyZ8SvQc+Jykj0nSc9+kF6B5DMbIcggstDuHpaGVVKuHXuEs3NNfOl3mwGFUItd1QfzCaKL4YxUzN+Qg5RJriNRWbkTVbC3yFbRu/2oaRBjX0hzZveTi0P/Sg98/seRo4K3lvOWVEtMLr9OZaJ6Whg0fTBbIcggstDuFxtNKFSlz6aNM6SJ45NOR8yTcQV/IoPQvBsXdGGYPc7PjiAg/RA30sIHI0abOcY6o+tJLyI35MCyq5xfh3dnN7b89QOLTC90DKaElJ0Uu35vWdQ0/3v+65yHIILrQ4hCf1VtJ0gOtHO2l9ZDZLm80oENRzgjy3nBh/gbkOsOjZrZNRdtwmh4m8BtJKw3nRf2STZX26W6QbzIVhCmo0pAz22bR2BWeofm7tk89pWon+j8KvB8dkOQQXWhzC6rTSKZvLMVlTBKyOjjmb3bH4bpcXN21ST6EU3v5gMMpscXuF62zTM3oFYtlCezNPB5FIB7f4MXNrt/CA2nPM22+Tz08vowZ1FjvwtrYtnyCH7BN6Nu/lgf32y0V6fC84tuq+G1kOwYUWh+DiWRda6aKbeEGw9/BchsdOqpazr4SUMYcZLzgXWCJjGtb2wNq9ugMZeu0m3W7gek1N12+/mq1fUA/asmZ5gHS0ctfa97jh1gJrzRfzjI4+Wpe5EzRjonKUtOxoLvJWhJWhxSGsKQgWlusjE3gl9RjUsIdO1AW2uG8Q/RmYYjbXa5jlHFTC0Nc9w2AMNU3SJt2jkvtF+se/tN0wGbLCihG8G+7cZ+Srgb7DQB+8s8lXu9wySEivJHQIgnnpEA5kOQQXWhxCN1rp4qF0uR55LjCDlwgW7cH8hpfUnhGAgoeS7YMa6JUEJPQGh1Y2YH/vr9O6jGeMN+hhsf8sTT2beOZ3CLJtos8p2u/zpOiy+ISUg7u0LsNd/NH/xf3y6z8hqbPIcggutDiEJ/RWulAJC7Ckk7bCdGQ2sYFWModH0/DrvbEv/2xsXkaOzR7lcxunQLusbOKsyJNaTwzK7jbvHEVdZldof8fz/1gemGrJSN/wzGDCiikHuSPxexSTLfdouiQey3IILrQ4hEcnGKevO3dHX8Vol+h/eG7t6Zf24Qs5z4uHL+ddBLiKntncBl7GHJL66egkmZXL52QdsMGwSiYAt+CD0Sk0jh5riNmz5Vt2vSjtbU3Pjf5a2n1kcy3mqD92s3h4D1VuHsQZ9CkGDFlbLMqse0RJTEKWQ3ChxSE8Ha3QK6F0XjEhloo0qwRjG2P/q9nBKSjm7du9h/bhh6OH9vzGzG/1wgYdfx0/tBd3sK3MgLo1ihmdgya+YRc8zPUUHkF/1+jj9PTU7gWdVVWV7MNc44zBtCjVwV7W7G7xQCUnb7Dl841Raj3HFkvoL/NZm/SYrm+sPZ6vliEmyyG40OIQfiHB2PnLHr609/fxB1BGgJ4Sb6G35jG+6ieXDWL71unw4NCGr01PmYFijv5rGcx5j5oIH4H6hZnobMtM9HuY7v0PRhn1juk1J8c2V/ncqOT62ujp5AS00iOVpMNOC0S1Bnhvgzfg4xppCc9trhz6Tk3anSAoBypZFbIcggstDuGR2gp6jW/SSUy7r6BxvGRwP6QzvrjVA57O2RcbtABN1H2T5k8+mnlv7/D1fu+E62DSm4X1r1CApd63PYeDkXlAp59Okwz5/rBOeigMdjXxKSs2TlQ8v03uZwk/IMC8wItG1nI7QbaYPXIYI/sOToxbstKDLIfgQotDeCStOAXbp6CYuVnW0EcG1wA7xIvd9J69IfZ0nF1Bat+0ANEIpp7eSgbqaRkEY5YXpPn23sbvM1EZRccqJJedXthc/b5RyQRpAzOUD8iy9PNQu8kRHSNVDeAJsmJAuLJnuz61cS6v0rvsWV3ZKwjTBbIcggstDsHFsy4JxpGeki1v5871GnEd1sXi+HtXdsPsHuehICMrkr+96r6gG2ZPve8bBRyeVc6WTLth+BIm/bZOZqCRPqLgIeiMAbEGb3e4YVrPyUvoTayczPo0t+nrpAzqRDwmLMpMC+42SSUYC8uhxSE8jlaihOGN5VRSkjIQ4OKXOVT9iG6oy7y/QPbXJvaqINjlfoAjE2ywaab7COe2BOg70UA9BLK+W/vwwLpcN9gCGW31RzIzaQ60WAfjjMMK9IT+sx9p+pgtHFq5W0430e57a4pWhNWhxSE8Ha14BVsiKnE8kT5V6BfwJrAFsnIoZopxII9EekqepcepXjGdwNndTzCAlqWvz6FlzBAMpPfEWysE+gpSGAsqo93i/ZQv7foUQbDRVbIgQUQTEcWsWMhFlkNwocUhdNNWfqoNlaQY73wQmi8qFkNoK/39dGX8BtoBPupDBmroc+8GJ2CGFTyjBrL19FObPKIr3+pwAuONtWeTtOc1/Cc4boBznYVcSAHcAklPatteRP/AuKc8t5d1Rsme9BR+HbIcggstDuHpSk1G3gr+sAcK2H+LPgMWsU97DYvPqEh8iYwyUEDAWScRmD0V6RrWnFOnuFreP6KV1toFIncVaY4g7d4tLzPGWmHX3C/zmZWWi/RJA6yufG1ccvnFLh9eprdPeoEvQpZDcKHFITxd8RZ+/ZZOgAt1VkKLIi0ZNIsMwgy9BtY14YGNWd3hgZyqyOVOus3SjqSPSPrP09e9Y7/cQsi99L0z/kbQVnOBmmDX6arI9G4YGKRkH0GF8YWnghaH8DhvhXCL4cNkRfWCKevznBHn5Ku6SJ/tXiKYlg07mPHQwSvp4K0Eb3ynQE0E0hwp4CxdkRgb6MPlLO1lkDI6FcDvcBixvBVhZWhxCKt7KzQ10UmCTjZRnFiLPs4Jkiw7WcLG1a/TZ7LMT7CfhfO+dn6Ap3F0ERu6fNVvBKeqgCPH4yTHFoVcymPj0eLcuGQyc6hh1XqRK1IJIcshuNDiENYTBPPMLy16RCWkJOoI206wC65O+SFPajEZTHfxpoMW4+z0d6lkw2kTPNHywtpzSPw5a6Pht4RNK8ySDUx3370wXjn+ln5k10NxqGRVyHIILrQ4hMfRiuu5hOVmOTKDDGrhC7+PsooRDznbwhtkfM1hcktkfxUv0qd7MbsszihzfsttWuuh1N4wJcCpMBxNi537WYnyBCih2f/H3kmFBOzJbSdPJIkuHgohyyG40OIQXKxkZrrqL+45LDCDZ++sXSOQNcfX/hSmG/VR4sAaJutDl6lRgKWdeQe9o49T0TeLpHxsdUSZ5mIHZ7KgzOOY1EMviXSDdIUaVFjvpJOlh5+szfMsVz1QuAtkOQQXWhzC0wXBungxwQnUsARXg8DR4X56Fzn1l+hoqpAOplUsVPwG/3heJrXw6xMUS7lJm+UaZn9gdfrj1Ldb7JT/iurBTCSm3oRhUPw4nMHrKXDQ8OBF+jfO6LmsAbIcggstDmE9tLLqVsopzzQZO7v4nSLEkdfggGY80lCQlbvA6ZNjTxYHxsx4PkYJzQ8QTlh/zCmiEnlDvB7SNMp7L7l9sgMe46EQshyCCy0OYf200oViouCSMzPNaZfDjqN7o/0aqOv1xfjmeGQ95s6YHoOdIEDHXoMDFsPH8zh7YTypPT36T0eSddjG+FSQ5RBcaHEIv5dWVk1U9sy4Z+ojWnESnsPU7jiCKj4lta2aMbVhzSM4K6fcqOPQCoN4pBVPdvewbiohZDkEF1ocgovfZqK6wtNofuqTRA3doUKm2WTR4bDdFY+4Ck61AWa4jal9dDjk90/RhwdZDsGFFofg4o+brnXRTetko628j+O+g2/neBxdAmt/A314kOUQXGhxCC7+WpO2Lur5nWj/5e9XlkNwocUhCIIgCIIgCIIgCIIgCIIgCIIgCIIgCIIQ/ir8H6TJqMNQ0xoYAAAAAElFTkSuQmCC" alt="Sunny face icon" width="45" height="45" aria-hidden="true" style="image-rendering:pixelated"></div>
+          <div>
+            <h4>Sunny Day</h4>
+            <p>Clear skies or sunny conditions — campground weather level: elite.</p>
+            <span class="trigger">Shown when: description contains "clear" or "sun"</span>
+          </div>
+        </div>
+
+        <div class="icon-card">
+          <div class="icon-emoji"><img src="data:image/png;base64,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" alt="Hoodie icon" width="45" height="45" aria-hidden="true" style="image-rendering:pixelated"></div>
+          <div>
+            <h4>Hoodie Weather</h4>
+            <p>
+              Clouds, rain, drizzle, storms, mist, fog, haze, or other unsettled conditions.
+              Classic "bring a hoodie just in case" weather.
+            </p>
+            <span class="trigger">Shown when: clouds, rain, storm, thunder, shower, mist, fog, haze, smoke, dust, ash, squall, tornado</span>
+          </div>
+        </div>
+
+        <div class="icon-card">
+          <div class="icon-emoji"><img src="data:image/png;base64,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" alt="Snowflake icon" width="45" height="45" aria-hidden="true" style="image-rendering:pixelated"></div>
+          <div>
+            <h4>Snowflake</h4>
+            <p>Snow, sleet, blizzard, or flurries. Your propane bill just got nervous.</p>
+            <span class="trigger">Shown when: description contains "snow", "sleet", "blizzard", or "flurr"</span>
+          </div>
+        </div>
+
+        <div class="icon-card">
+          <div class="icon-emoji"><img src="data:image/png;base64,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" alt="Freezy face icon" width="45" height="45" aria-hidden="true" style="image-rendering:pixelated"></div>
+          <div>
+            <h4>Freezy Face</h4>
+            <p>Extreme cold outside. Nope.</p>
+            <span class="trigger">Shown when: outside temp &le; 32 °F</span>
+          </div>
+        </div>
+
+      </div>
+
+      <h3>Thermometer Colour</h3>
+      <p>
+        A small thermometer icon also appears in the weather area. Its colour tells you at a glance
+        how cold or warm it is outside:
+      </p>
+      <table>
+        <thead><tr><th>Colour</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--cool)">Blue thermometer</strong></td>
+            <td>Outside temperature is below 40 °F — dress warmly</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--heat)">Red thermometer</strong></td>
+            <td>Outside temperature is 40 °F or above</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Sunrise &amp; Sunset Icons</h3>
+      <p>
+        The bottom-right of the home screen shows dedicated sunrise and sunset icons alongside the
+        times pulled from the weather service. These update daily.
+      </p>
+    </section>
+
+    <!-- ── 12. QUICK REFERENCE ── -->
+    <section id="quick-ref">
+      <h2>14. Quick Reference</h2>
+      <div class="quick-grid">
+        <div class="quick-card">
+          <div class="task">Change target temperature</div>
+          <div class="how">Tap ▲ or ▼ on the home screen</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Switch to Heat / Cool / Fan / Off</div>
+          <div class="how">Tap the mode button on the right side</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Change fan speed (High / Low)</div>
+          <div class="how">Tap the <strong>Fan</strong> button again while already in Fan mode</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Open the web interface</div>
+          <div class="how">Go to <code>http://&lt;device IP&gt;</code> in a browser</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Clear a fault</div>
+          <div class="how">Tap a mode button, or Settings → System → Reset Fault</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Change Wi-Fi network</div>
+          <div class="how">Settings → WiFi SSID / WiFi Password</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Force Wi-Fi reconnect</div>
+          <div class="how">Settings → Reconnect WiFi</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">See runtime stats</div>
+          <div class="how">Settings → System</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Toggle external web page</div>
+          <div class="how">Settings → Web: External</div>
+        </div>        <div class="quick-card">
+          <div class="task">Authorize browser for web control</div>
+          <div class="how">Settings &rarr; Add Device &rarr; scan QR code</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Remove all authorized devices</div>
+          <div class="how">Settings &rarr; Add Device &rarr; hold &ldquo;Remove All&rdquo; 1.5 s</div>
+        </div>        <div class="quick-card">
+          <div class="task">Re-calibrate touchscreen</div>
+          <div class="how">Settings → Calibrate Touch</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Enable / disable schedule</div>
+          <div class="how">Web interface → Schedule tab → Enable Schedule toggle → Save</div>
+        </div>
+        <div class="quick-card">
+          <div class="task">Change a scheduled setpoint</div>
+          <div class="how">Web interface → Schedule tab → edit the day / period → Save Schedule</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  RenegadeThermostat &mdash; User Guide &mdash; Generated May 2026
+</footer>
+
+</body>
+</html>
